@@ -1,5 +1,7 @@
 import Header from "@/components/Header";
+import { Toaster } from "@/components/Toaster";
 import { AuthProvider } from "@/lib/auth";
+import { ToastProvider } from "@/lib/toast";
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
@@ -21,8 +23,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="absolute top-1/3 -right-40 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/20 blur-[120px] animate-float [animation-delay:-4s]" />
         </div>
         <AuthProvider>
-          <Header />
-          <main className="mx-auto max-w-6xl px-5 pb-24">{children}</main>
+          <ToastProvider>
+            <Header />
+            <main className="mx-auto max-w-6xl px-5 pb-24">{children}</main>
+            <Toaster />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

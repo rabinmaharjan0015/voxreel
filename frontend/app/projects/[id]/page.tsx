@@ -40,6 +40,7 @@ export default function ProjectPage() {
     );
 
   const url = job.video_url ? `${API}${job.video_url}` : null;
+  const thumb = job.thumbnail_url ? `${API}${job.thumbnail_url}` : undefined;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pt-8">
@@ -53,6 +54,7 @@ export default function ProjectPage() {
         <div className="space-y-4 animate-fade-up">
           <video
             src={url}
+            poster={thumb}
             controls
             className="mx-auto max-h-[70vh] w-full rounded-2xl border border-line bg-black shadow-2xl shadow-black/50"
           />

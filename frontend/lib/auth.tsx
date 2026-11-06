@@ -1,8 +1,23 @@
 "use client";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-const TOKEN_KEY = "voxreel_token";
-const EMAIL_KEY = "voxreel_email";
+const TOKEN_COOKIE = "voxreel_token";
+const EMAIL_COOKIE = "voxreel_email";
+const MAX_AGE = 30 * 86400; // 30 days, matching JWT_TTL
+
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${MAX_AGE}; SameSite=Lax`;
+}
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+function deleteCookie(name: string) {
+  document.cookie = `${name}=; path=/; max-age=0`;
+}
 
 type User = { email: string } | null;
 type AuthContextType = {
@@ -15,8 +30,8 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  login: () => {},
-  logout: () => {},
+  login: () => { },
+  logout: () => { },
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -24,38 +39,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = localStorage.getItem(TOKEN_KEY);
-    const e = localStorage.getItem(EMAIL_KEY);
+    const t = getCookie(TOKEN_COOKIE);
+    const e = getCookie(EMAIL_COOKIE);
     if (t && e) setUser({ email: e });
     setLoading(false);
   }, []);
 
   const login = (token: string, email: string) => {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(EMAIL_KEY, email);
+    setCookie(TOKEN_COOKIE, token);
+    setCookie(EMAIL_COOKIE, email);
     setUser({ email });
   };
 
   const logout = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(EMAIL_KEY);
+    deleteCookie(TOKEN_COOKIE);
+    deleteCookie(EMAIL_COOKIE);
     setUser(null);
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   return useContext(AuthContext);
 }
 
-/** Returns auth headers for fetch calls — works outside of React context too. */
+/** Returns auth headers for fetch calls — reads from cookie. */
 export function authHeaders(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const t = localStorage.getItem(TOKEN_KEY);
+  const t = getCookie(TOKEN_COOKIE);
   return t ? { Authorization: `Bearer ${t}` } : {};
 }

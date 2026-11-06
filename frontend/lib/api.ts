@@ -117,3 +117,23 @@ export async function authLogin(email: string, password: string): Promise<AuthRe
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? "Invalid email or password");
   return r.json();
 }
+
+// ---- OAuth social login ----
+export async function authOAuthStart(provider: string): Promise<{ url: string }> {
+  const r = await fetch(`${API}/api/auth/oauth/${provider}/start`);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? "Could not start OAuth");
+  return r.json();
+}
+
+// ---- media upload (for custom visuals) ----
+export async function uploadMedia(files: File[]): Promise<{ id: string; count: number }> {
+  const fd = new FormData();
+  files.forEach((f) => fd.append("files", f));
+  const r = await fetch(`${API}/api/media`, {
+    method: "POST",
+    headers: { "X-Client-Id": getClientId(), ...authHeaders() },
+    body: fd,
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? "Upload failed");
+  return r.json();
+}

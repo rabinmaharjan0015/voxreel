@@ -9,7 +9,7 @@ export type Catalog = {
 };
 export type Job = {
   id: string; status: "queued" | "running" | "done" | "error"; step: string;
-  progress: number; title: string | null; topic: string; video_type: string; created_at: number; video_url: string | null; error: string | null;
+  progress: number; title: string | null; topic: string; video_type: string; created_at: number; video_url: string | null; thumbnail_url: string | null; error: string | null;
 };
 export type Connections = Record<"youtube" | "tiktok", { configured: boolean; connected: boolean }>;
 export type Publication = { id: string; platform: string; status: "queued" | "running" | "done" | "error"; url: string | null; note: string | null; error: string | null };

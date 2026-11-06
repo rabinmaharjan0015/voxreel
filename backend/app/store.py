@@ -6,7 +6,7 @@ from . import config
 
 r = redis.Redis.from_url(config.REDIS_URL, decode_responses=True)   # app state
 
-_NULLABLE = ("title", "video_url", "error")
+_NULLABLE = ("title", "video_url", "thumbnail_url", "error")
 
 
 def _fernet() -> Fernet:
@@ -30,8 +30,8 @@ def create_job(cid: str, video_type: str, topic: str) -> str:
     now = time.time()
     r.hset(f"job:{jid}", mapping={
         "id": jid, "status": "queued", "step": "script", "progress": "0",
-        "title": "", "video_url": "", "error": "", "topic": topic[:200],
-        "video_type": video_type, "created_at": str(now),
+        "title": "", "video_url": "", "thumbnail_url": "", "error": "",
+        "topic": topic[:200], "video_type": video_type, "created_at": str(now),
     })
     r.expire(f"job:{jid}", config.JOB_TTL)
     r.zadd(f"client:{cid}:jobs", {jid: now})

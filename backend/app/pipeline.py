@@ -9,12 +9,16 @@ from .schemas import JobRequest
 from .providers import llm, tts, visuals, captions
 
 STEPS = ["script", "voice", "visuals", "assemble", "captions", "done"]
-_KEEP = {"final.mp4"}  # only the finished video stays on disk after cleanup
+_KEEP = {"final.mp4", "thumb.jpg"}  # finished video + thumbnail stay on disk
 
 
-def _ffmpeg(args: list[str], cwd: Path):
-    p = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *args], cwd=cwd,
-                       capture_output=True, text=True)
+def _ffmpeg(args: list[str], cwd: Path, timeout: int = 600):
+    """Run ffmpeg with a timeout so a stuck encode can't hang the worker forever."""
+    try:
+        p = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *args], cwd=cwd,
+                           capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"ffmpeg timed out after {timeout}s")
     if p.returncode:
         raise RuntimeError(p.stderr[-400:])
 
@@ -87,7 +91,16 @@ def run_job(jid: str, payload: dict):
         else:
             (work / "raw.mp4").rename(work / final)
 
-        store.update(jid, status="done", step="done", progress=1.0, video_url=f"/files/{jid}/{final}")
+        # Extract a thumbnail frame at 2s into the video for preview cards.
+        try:
+            _ffmpeg(["-i", final, "-ss", "2", "-vframes", "1", "-q:v", "2", "thumb.jpg"],
+                    work, timeout=60)
+            thumb = f"/files/{jid}/thumb.jpg"
+        except Exception:
+            thumb = ""  # thumbnail is best-effort; don't fail the job
+
+        store.update(jid, status="done", step="done", progress=1.0,
+                     video_url=f"/files/{jid}/{final}", thumbnail_url=thumb)
         # Free disk: keep only the finished MP4, drop all intermediate artifacts.
         _cleanup(work)
     except Exception as e:  # readable error with any key scrubbed

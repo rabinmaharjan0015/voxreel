@@ -15,6 +15,14 @@ image_prompt is a concrete visual description (no text in image)."""
 
 
 def _extract_json(text: str) -> dict:
+    # Strip markdown code fences (```json ... ```) that some models add.
+    text = re.sub(r"```(?:json)?\s*", "", text).replace("```", "").strip()
+    # Try a direct parse first (clean JSON with no surrounding prose).
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # Fallback: extract the outermost { ... } block (handles prose-wrapped JSON).
     m = re.search(r"\{.*\}", text, re.S)
     if not m:
         raise ValueError("LLM did not return JSON")

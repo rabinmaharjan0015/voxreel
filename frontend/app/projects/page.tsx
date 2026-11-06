@@ -4,6 +4,8 @@ import type { Job } from "@/lib/types";
 import Link from "next/link";
 import { useState } from "react";
 
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 const badge: Record<Job["status"], { cls: string; label: string }> = {
   queued: { cls: "bg-zinc-500/20 text-zinc-300", label: "Queued" },
   running: { cls: "bg-violet-500/20 text-violet-200", label: "Processing" },
@@ -54,11 +56,24 @@ export default function Projects() {
       <ul className="space-y-3">
         {jobs?.map((j) => (
           <li key={j.id} className="group glass glass-hover flex items-center justify-between gap-4 p-4">
-            <Link href={`/projects/${j.id}`} className="min-w-0 flex-1">
-              <p className="truncate font-medium">{j.title ?? j.topic}</p>
-              <p className="text-xs text-zinc-500">
-                {j.video_type} · {new Date(j.created_at * 1000).toLocaleString()}
-              </p>
+            <Link href={`/projects/${j.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+              {j.thumbnail_url ? (
+                <img
+                  src={`${API}${j.thumbnail_url}`}
+                  alt=""
+                  className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                />
+              ) : (
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-white/5 text-lg">
+                  {j.status === "done" ? "🎬" : j.status === "error" ? "⚠️" : "⏳"}
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="truncate font-medium">{j.title ?? j.topic}</p>
+                <p className="text-xs text-zinc-500">
+                  {j.video_type} · {new Date(j.created_at * 1000).toLocaleString()}
+                </p>
+              </div>
             </Link>
             <div className="flex shrink-0 items-center gap-2">
               {(j.status === "queued" || j.status === "running") && (
