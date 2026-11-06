@@ -1,0 +1,34 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redis-data:/data"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 10 }
+
+  api:
+    build: ./backend
+    env_file: ./backend/.env.example
+    environment: &env
+      REDIS_URL: redis://redis:6379/0
+      OUTPUT_DIR: /srv/outputs
+      DATA_DIR: /srv/data
+      ALLOWED_ORIGINS: http://localhost:3000
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:8000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY:-}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
+      PUBLIC_MEDIA_BASE: ${PUBLIC_MEDIA_BASE:-}
+    ports: ["8000:8000"]
+    volumes: ["outputs:/srv/outputs", "data:/srv/data"]
+    depends_on: { redis: { condition: service_healthy } }
+
+  worker:   # scale with: docker compose up --scale worker=2
+    build: ./backend
+    command: ["rq", "worker", "videos", "--url", "redis://redis:6379/0"]
+    environment: *env
+    volumes: ["outputs:/srv/outputs", "data:/srv/data", "hf-cache:/root/.cache"]
+    depends_on: { redis: { condition: service_healthy } }
+
+volumes: { redis-data: {}, outputs: {}, data: {}, hf-cache: {} }

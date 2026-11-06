@@ -1,0 +1,63 @@
+import json, re
+import httpx
+
+OPENAI_COMPAT = {
+    "openai": ("https://api.openai.com/v1", "gpt-4o-mini"),
+    "groq": ("https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"),
+    "openrouter": ("https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct:free"),
+    "ollama": ("http://localhost:11434/v1", "llama3.2"),
+}
+
+SYSTEM = """You write voice-over scripts for videos. Write exactly how a real person talks:
+contractions, varied sentence length, no stage directions, no emojis, no markdown.
+Return ONLY JSON: {"title": str, "scenes": [{"narration": str, "image_prompt": str}]}.
+image_prompt is a concrete visual description (no text in image)."""
+
+
+def _extract_json(text: str) -> dict:
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m:
+        raise ValueError("LLM did not return JSON")
+    return json.loads(m.group(0))
+
+
+def generate_script(req, vt: dict, key: str | None) -> dict:
+    words = int(req.duration_sec * 2.6)
+    user = (
+        f"Video type: {vt['name']}. Style: {vt['style']}\n"
+        f"Topic: {req.topic}\nTone: {req.tone}\nLanguage: {req.language}\n"
+        f"Target ~{words} words total across {vt['scenes']} scenes."
+    )
+    last_err = None
+    for attempt in range(3):
+        try:
+            with httpx.Client(timeout=120) as c:
+                if req.llm == "anthropic":
+                    r = c.post("https://api.anthropic.com/v1/messages",
+                               headers={"x-api-key": key or "", "anthropic-version": "2023-06-01"},
+                               json={"model": req.llm_model or "claude-sonnet-4-5", "max_tokens": 2000,
+                                     "system": SYSTEM, "messages": [{"role": "user", "content": user}]})
+                    r.raise_for_status()
+                    text = r.json()["content"][0]["text"]
+                else:
+                    base, default_model = OPENAI_COMPAT[req.llm]
+                    headers = {"Authorization": f"Bearer {key}"} if key else {}
+                    r = c.post(f"{base}/chat/completions", headers=headers,
+                               json={"model": req.llm_model or default_model,
+                                     "messages": [{"role": "system", "content": SYSTEM},
+                                                  {"role": "user", "content": user}]})
+                    r.raise_for_status()
+                    text = r.json()["choices"][0]["message"]["content"]
+            data = _extract_json(text)
+            if not data.get("scenes"):
+                raise ValueError("Script has no scenes")
+            return data
+        except (ValueError, json.JSONDecodeError) as e:
+            last_err = e  # JSON parse error — retry, the model may produce valid JSON next time
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code < 500:
+                raise  # 4xx (bad key, bad request) — don't retry
+            last_err = e
+        except httpx.HTTPError as e:
+            last_err = e  # transient network/timeout — retry
+    raise RuntimeError(f"Script generation failed after retries: {last_err}")

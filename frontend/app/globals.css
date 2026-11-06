@@ -1,0 +1,65 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+
+body {
+  @apply bg-ink text-zinc-100 font-sans antialiased;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- surfaces ---- */
+.glass {
+  @apply bg-white/[0.04] border border-line backdrop-blur-xl rounded-2xl;
+}
+.glass-hover {
+  @apply transition hover:bg-white/[0.07] hover:border-white/15;
+}
+
+/* ---- form controls ---- */
+.field {
+  @apply w-full rounded-xl bg-white/[0.04] border border-line px-4 py-3 text-sm outline-none transition
+         focus:border-violet-400/70 focus:bg-white/[0.07] focus:ring-2 focus:ring-violet-500/20
+         placeholder:text-zinc-600;
+}
+.field-label {
+  @apply text-xs font-medium uppercase tracking-wider text-zinc-500;
+}
+select.field {
+  @apply cursor-pointer appearance-none bg-[length:1rem] bg-[right_1rem_center] bg-no-repeat pr-10;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2371717a'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+/* ---- buttons ---- */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold
+         transition active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-primary {
+  @apply btn bg-brand text-white shadow-lg shadow-fuchsia-500/20 hover:brightness-110 hover:shadow-fuchsia-500/30;
+}
+.btn-ghost {
+  @apply btn border border-line hover:bg-white/5 hover:border-white/15;
+}
+
+/* ---- skeleton shimmer ---- */
+.skeleton {
+  @apply relative overflow-hidden rounded-2xl bg-white/[0.04];
+}
+.skeleton::after {
+  @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.06] to-transparent;
+  content: "";
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* ---- scrollbar ---- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply rounded-full bg-white/10; }
+::-webkit-scrollbar-thumb:hover { @apply bg-white/20; }
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
