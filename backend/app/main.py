@@ -1,12 +1,13 @@
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from . import store, tasks
 from .catalog import VIDEO_TYPES, PROVIDERS, VOICES, LANGUAGES
 from .config import ALLOWED_ORIGINS, OUTPUT_DIR
 from .schemas import JobRequest
-from .deps import cid as _cid
+from .deps import cid as cid_dep
 from .routes_publish import router as publish_router
+from .routes_auth import router as auth_router
 
 app = FastAPI(title="VoxReel API")
 app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS,
@@ -14,6 +15,7 @@ app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS,
 app.mount("/files", StaticFiles(directory=OUTPUT_DIR), name="files")
 
 app.include_router(publish_router)
+app.include_router(auth_router)
 
 
 @app.get("/api/health")
@@ -33,8 +35,7 @@ def catalog():
 
 
 @app.post("/api/jobs")
-def create_job(req: JobRequest, x_client_id: str = Header(default="")):
-    cid = _cid(x_client_id)
+def create_job(req: JobRequest, cid: str = Depends(cid_dep)):
     if not any(v["id"] == req.video_type for v in VIDEO_TYPES):
         raise HTTPException(400, "Unknown video type")
     used = {}
@@ -55,13 +56,12 @@ def create_job(req: JobRequest, x_client_id: str = Header(default="")):
 
 
 @app.get("/api/jobs")
-def list_jobs(x_client_id: str = Header(default="")):
-    return store.list_for_client(_cid(x_client_id))
+def list_jobs(cid: str = Depends(cid_dep)):
+    return store.list_for_client(cid)
 
 
 @app.get("/api/jobs/{jid}")
-def get_job(jid: str, x_client_id: str = Header(default="")):
-    cid = _cid(x_client_id)
+def get_job(jid: str, cid: str = Depends(cid_dep)):
     job = store.get(jid)
     if not job or not store.owns_job(cid, jid):
         raise HTTPException(404, "Job not found")
@@ -69,8 +69,7 @@ def get_job(jid: str, x_client_id: str = Header(default="")):
 
 
 @app.delete("/api/jobs/{jid}")
-def delete_job(jid: str, x_client_id: str = Header(default="")):
-    cid = _cid(x_client_id)
+def delete_job(jid: str, cid: str = Depends(cid_dep)):
     if not store.owns_job(cid, jid):
         raise HTTPException(404, "Job not found")
     store.delete_job(cid, jid)

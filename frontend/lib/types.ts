@@ -13,3 +13,5 @@ export type Job = {
 };
 export type Connections = Record<"youtube" | "tiktok", { configured: boolean; connected: boolean }>;
 export type Publication = { id: string; platform: string; status: "queued" | "running" | "done" | "error"; url: string | null; note: string | null; error: string | null };
+export type AuthUser = { email: string };
+export type AuthResponse = { token: string; email: string };

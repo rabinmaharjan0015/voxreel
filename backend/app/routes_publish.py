@@ -2,7 +2,7 @@ import secrets
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, SecretStr
-from rq import Queue
+from .celery_app import celery
 from . import config, store
 from .deps import cid as cid_dep
 from .publish import tiktok, youtube
@@ -84,8 +84,8 @@ def publish(jid: str, req: PublishRequest, cid: str = Depends(cid_dep)):
     if req.target == "ayrshare":
         store.put_keys(pid, {"ayrshare": req.keys["ayrshare"].get_secret_value()})
     opts = req.model_dump(exclude={"keys", "target"})
-    Queue("videos", connection=store.rq_conn).enqueue(
-        "app.publisher.run_publish", pid, cid, jid, req.target, opts, job_timeout=1800, result_ttl=0, failure_ttl=3600)
+    celery.send_task("app.publisher.run_publish",
+                     args=[pid, cid, jid, req.target, opts], queue="videos")
     return {"id": pid}
 
 

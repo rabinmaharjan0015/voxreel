@@ -1,6 +1,7 @@
 import subprocess, shutil
 from pathlib import Path
 import soundfile as sf
+from .celery_app import celery
 from .catalog import VIDEO_TYPES
 from . import store
 from .config import OUTPUT_DIR
@@ -33,6 +34,7 @@ def _cleanup(work: Path) -> None:
                 pass
 
 
+@celery.task(name="app.pipeline.run_job")
 def run_job(jid: str, payload: dict):
     # Keys are decrypted from Redis (and deleted there) here; never written to disk or logged.
     keys = store.take_keys(jid)

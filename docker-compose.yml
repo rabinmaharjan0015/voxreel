@@ -20,13 +20,22 @@ services:
       TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY:-}
       TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
       PUBLIC_MEDIA_BASE: ${PUBLIC_MEDIA_BASE:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-console}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-VoxReel <noreply@voxreel.app>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      HF_MODEL: ${HF_MODEL:-Qwen/Qwen2.5-3B-Instruct}
     ports: ["8000:8000"]
     volumes: ["outputs:/srv/outputs", "data:/srv/data"]
     depends_on: { redis: { condition: service_healthy } }
 
   worker:   # scale with: docker compose up --scale worker=2
     build: ./backend
-    command: ["rq", "worker", "videos", "--url", "redis://redis:6379/0"]
+    command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "-Q", "videos"]
     environment: *env
     volumes: ["outputs:/srv/outputs", "data:/srv/data", "hf-cache:/root/.cache"]
     depends_on: { redis: { condition: service_healthy } }

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, EmailStr, Field, SecretStr
 
 
 class JobRequest(BaseModel):
@@ -7,7 +7,7 @@ class JobRequest(BaseModel):
     duration_sec: int = Field(default=60, ge=15, le=300)
     tone: str = "friendly"
     language: str = "en"
-    llm: str = "ollama"
+    llm: str = "local"
     llm_model: str | None = None
     tts: str = "kokoro"
     voice: str | None = None
@@ -15,3 +15,24 @@ class JobRequest(BaseModel):
     captions: bool = True
     # Bring-your-own-key: keyed by provider id. Held in memory for the job only.
     keys: dict[str, SecretStr] = {}
+
+
+# ---- Auth ----
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyRequest(BaseModel):
+    token: str
+
+
+class SetPasswordRequest(BaseModel):
+    email: EmailStr
+    token: str
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str

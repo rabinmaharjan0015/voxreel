@@ -15,7 +15,7 @@ export default function Create() {
     duration_sec: 60,
     tone: "friendly",
     language: "en",
-    llm: "ollama",
+    llm: "local",
     llm_model: "",
     tts: "kokoro",
     visuals: "pollinations",

@@ -1,4 +1,5 @@
 "use client";
+import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,6 +12,7 @@ const LINKS = [
 
 export default function Header() {
   const path = usePathname();
+  const { user, logout } = useAuth();
   const isActive = (href: string) =>
     href === "/" ? path === "/" : path.startsWith(href);
 
@@ -33,6 +35,26 @@ export default function Header() {
               {l.label}
             </Link>
           ))}
+          {user ? (
+            <div className="ml-2 flex items-center gap-2">
+              <span className="hidden max-w-[140px] truncate text-xs text-zinc-400 sm:inline">
+                {user.email}
+              </span>
+              <button
+                onClick={logout}
+                className="rounded-lg border border-line px-3 py-1.5 text-zinc-400 transition hover:border-white/15 hover:text-zinc-200"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="ml-2 rounded-lg bg-brand px-4 py-1.5 font-semibold text-white transition hover:brightness-110"
+            >
+              Log in
+            </Link>
+          )}
         </nav>
       </div>
     </header>

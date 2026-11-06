@@ -1,4 +1,5 @@
-"""Runs in the RQ worker: uploads a finished video to a platform."""
+"""Runs in the Celery worker: uploads a finished video to a platform."""
+from .celery_app import celery
 from . import config, store
 from .config import OUTPUT_DIR
 from .publish import ayrshare, tiktok, youtube
@@ -17,6 +18,7 @@ def _fresh_tokens(cid: str, platform: str):
     return tok
 
 
+@celery.task(name="app.publisher.run_publish")
 def run_publish(pid: str, cid: str, jid: str, target: str, opts: dict):
     keys = store.take_keys(pid)
     try:

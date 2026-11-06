@@ -33,9 +33,9 @@ VIDEO_TYPES = [
 
 PROVIDERS = {
     "llm": [
-        {"id": "ollama", "name": "Ollama (local)", "free": True, "needs_key": False,
-         "note": "Runs on your machine. Install Ollama and pull a model.",
-         "models": ["llama3.2", "llama3.1", "qwen2.5", "phi3"]},
+        {"id": "local", "name": "Hugging Face (local)", "free": True, "needs_key": False,
+         "note": "Free, runs in the worker. Downloads the model on first use.",
+         "models": ["Qwen/Qwen2.5-3B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct", "Qwen/Qwen2.5-7B-Instruct"]},
         {"id": "groq", "name": "Groq", "free": True, "needs_key": True,
          "note": "Free-tier key from console.groq.com",
          "models": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]},

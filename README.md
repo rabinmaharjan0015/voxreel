@@ -3,10 +3,10 @@ AI video platform: pick a video type → script → human-sounding voice → vis
 
 - **Backend** (`backend/`): FastAPI + ffmpeg. Voices: Kokoro (free, local), OpenAI, ElevenLabs. Whisper (faster-whisper) times the captions.
 - **Frontend** (`frontend/`): Next.js 14 App Router (TSX) + Tailwind. Routing is file-based: `/`, `/create/[type]`, `/projects`, `/projects/[id]`, `/settings/connections`, `/settings/keys`.
-- **Redis**: job state + history (7-day TTL), an RQ worker queue, per-client rate limiting. Keys wait in Redis encrypted (Fernet) for at most 1h and are deleted the instant a worker starts the job.
+- **Redis**: job state + history (7-day TTL), Celery task queue, per-client rate limiting. Keys wait in Redis encrypted (Fernet) for at most 1h and are deleted the instant a worker starts the job.
 - **Keys**: bring your own. Stored in browser localStorage, sent per job, never logged or written to disk.
 
-Free path (no paid key): Ollama + Kokoro + Pollinations.
+Free path (no paid key): Hugging Face local LLM + Kokoro + Pollinations.
 
 **Docker (recommended, runs everywhere incl. Windows):**
 ```
@@ -20,9 +20,9 @@ Scale throughput with `docker compose up --scale worker=3`. Set `KEY_ENCRYPTION_
 redis-server &
 cd backend && pip install -r requirements.txt && cp .env.example .env
 uvicorn app.main:app --reload --port 8000
-rq worker videos            # second terminal (Linux/macOS/WSL; RQ does not run natively on Windows)
+celery -A app.celery_app worker --loglevel=info -Q videos   # second terminal
 ```
-System deps: `ffmpeg`, `espeak-ng`.
+System deps: `ffmpeg`, `espeak-ng`. The local LLM model (~2 GB) downloads automatically on first use and is cached for subsequent jobs.
 
 ## Publishing to YouTube / TikTok
 Two routes, pick either (or both):
@@ -38,6 +38,24 @@ Two routes, pick either (or both):
 - **YouTube**: API uploads from an unaudited Google Cloud project are forced to *private*; apply for the YouTube API Services audit. `videos.insert` costs 1,600 quota units of the 10,000/day default (~6 uploads/day).
 - **TikTok**: unaudited apps can only post privately (and for max 5 users/24h). **"Send to inbox"** works immediately — you tap Publish in the TikTok app. The audit takes weeks; posts made before it passes stay private.
 - Videos are AI-generated: use the AI label on TikTok and YouTube's altered/synthetic-content disclosure in Studio where it applies.
+
+## Authentication
+
+Email-based signup with token verification:
+
+1. User enters their email on the **Sign up** page → backend sends a verification link
+2. User clicks the link → email is verified, password creation form appears
+3. User sets a password → logged in with a JWT (stored in browser localStorage)
+4. Logged-in users' jobs are scoped to their account instead of the anonymous browser ID
+
+The app works with or without auth — anonymous users keep the existing X-Client-Id behavior.
+
+**Email provider** (configured in `backend/.env`):
+- `console` (default) — prints the verification link to the backend terminal. No setup needed for local dev.
+- `smtp` — any SMTP server (Gmail, SES, Postmark). Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.
+- `resend` — Resend.com API. Set `RESEND_API_KEY`.
+
+**JWT** — session tokens last 30 days. Set `JWT_SECRET` in production (falls back to `KEY_ENCRYPTION_SECRET`).
 
 ## Production hardening
 

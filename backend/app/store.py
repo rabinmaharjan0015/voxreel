@@ -5,7 +5,6 @@ from cryptography.fernet import Fernet
 from . import config
 
 r = redis.Redis.from_url(config.REDIS_URL, decode_responses=True)   # app state
-rq_conn = redis.Redis.from_url(config.REDIS_URL)                     # RQ needs raw bytes
 
 _NULLABLE = ("title", "video_url", "error")
 
@@ -172,3 +171,49 @@ def gc_outputs(max_dirs: int = 200) -> int:
     except Exception:
         pass
     return removed
+
+
+# ---------- auth ----------
+
+def user_cid(email: str) -> str:
+    """Stable client-id derived from an email so a logged-in user's jobs are scoped to them."""
+    return f"user:{hashlib.sha256(email.encode()).hexdigest()[:24]}"
+
+
+def create_user(email: str) -> None:
+    r.hset(f"user:{email}", mapping={
+        "email": email, "password_hash": "", "verified": "0",
+        "created_at": str(time.time()),
+    })
+
+
+def get_user(email: str) -> dict | None:
+    h = r.hgetall(f"user:{email}")
+    if not h:
+        return None
+    h["verified"] = h.get("verified") == "1"
+    return h
+
+
+def set_user_verified(email: str) -> None:
+    r.hset(f"user:{email}", "verified", "1")
+
+
+def set_user_password(email: str, hashed: str) -> None:
+    r.hset(f"user:{email}", "password_hash", hashed)
+
+
+def put_verify_token(token: str, email: str) -> None:
+    r.set(f"verify:{token}", email, ex=config.VERIFY_TOKEN_TTL)
+
+
+def take_verify_token(token: str) -> str | None:
+    return r.getdel(f"verify:{token}")
+
+
+def put_setup_token(token: str, email: str) -> None:
+    r.set(f"setup:{token}", email, ex=config.SETUP_TOKEN_TTL)
+
+
+def take_setup_token(token: str) -> str | None:
+    return r.getdel(f"setup:{token}")
